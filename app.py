@@ -35,55 +35,59 @@ if st.session_state.user is None:
     # 1. 로그인 탭
     with tab1:
         st.subheader("셀러 로그인")
-        login_email = st.text_input("이메일 주소", key="login_email")
-        login_pw = st.text_input("비밀번호", type="password", key="login_pw")
-        
-        if st.button("로그인 완료", type="primary", use_container_width=True):
-            if login_email.strip() and login_pw.strip():
-                try:
-                    res = supabase.auth.sign_in_with_password({
-                        "email": login_email.strip(),
-                        "password": login_pw.strip()
-                    })
-                    st.session_state.user = res.user
-                    st.success("로그인 성공!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"로그인 실패: {e}")
-            else:
-                st.warning("이메일과 비밀번호를 모두 입력해 주세요.")
+        with st.form("login_form"):
+            login_email = st.text_input("이메일 주소")
+            login_pw = st.text_input("비밀번호", type="password")
+            submit_login = st.form_submit_button("로그인 완료", type="primary", use_container_width=True)
+            
+            if submit_login:
+                if login_email.strip() and login_pw.strip():
+                    try:
+                        res = supabase.auth.sign_in_with_password({
+                            "email": login_email.strip(),
+                            "password": login_pw.strip()
+                        })
+                        st.session_state.user = res.user
+                        st.success("로그인 성공!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"로그인 실패: {e}")
+                else:
+                    st.warning("이메일과 비밀번호를 모두 입력해 주세요.")
 
-    # 2. 회원가입 탭 (검증 및 인코딩 오류 완전 수정)
+    # 2. 회원가입 탭 (st.form 도입으로 누락 현상 완벽 해결)
     with tab2:
         st.subheader("신규 셀러 회원가입")
-        new_email = st.text_input("이메일 주소", key="new_email")
-        new_pw = st.text_input("비밀번호", type="password", key="new_pw")
-        user_name = st.text_input("성함 / 셀러명", key="user_name")
-        
-        if st.button("회원가입 완료", use_container_width=True):
-            email_val = new_email.strip()
-            pw_val = new_pw.strip()
-            name_val = user_name.strip()
+        with st.form("signup_form"):
+            new_email = st.text_input("이메일 주소")
+            new_pw = st.text_input("비밀번호", type="password")
+            user_name = st.text_input("성함 / 셀러명")
+            submit_signup = st.form_submit_button("회원가입 완료", type="primary", use_container_width=True)
             
-            if email_val and pw_val and name_val:
-                try:
-                    # 안전한 한글 텍스트 변환
-                    safe_name = json.loads(json.dumps(name_val, ensure_ascii=False))
-                    
-                    res = supabase.auth.sign_up({
-                        "email": email_val,
-                        "password": pw_val,
-                        "options": {
-                            "data": {
-                                "name": safe_name
+            if submit_signup:
+                email_val = new_email.strip()
+                pw_val = new_pw.strip()
+                name_val = user_name.strip()
+                
+                if email_val and pw_val and name_val:
+                    try:
+                        # 한글 인코딩 안전 변환
+                        safe_name = json.loads(json.dumps(name_val, ensure_ascii=False))
+                        
+                        res = supabase.auth.sign_up({
+                            "email": email_val,
+                            "password": pw_val,
+                            "options": {
+                                "data": {
+                                    "name": safe_name
+                                }
                             }
-                        }
-                    })
-                    st.success("회원가입이 완료되었습니다! 🔑 로그인 탭으로 이동해서 로그인해 주세요.")
-                except Exception as e:
-                    st.error(f"회원가입 실패: {e}")
-            else:
-                st.warning("모든 항목을 입력한 뒤 버튼을 눌러주세요.")
+                        })
+                        st.success("회원가입이 성공적으로 완료되었습니다! 🔑 로그인 탭으로 이동해서 로그인해 주세요.")
+                    except Exception as e:
+                        st.error(f"회원가입 실패: {e}")
+                else:
+                    st.warning("모든 항목을 입력해 주세요.")
 
 # -------------------------------------------------------------------
 # [메인 대시보드 화면] 로그인 성공 시
