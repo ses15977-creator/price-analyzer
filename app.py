@@ -10,6 +10,16 @@ st.set_page_config(
     page_icon="https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
     layout="wide"
 )
+st.set_page_config(
+    page_title="SellMetrics Pro | 시장 분석 및 수익성 대시보드",
+    page_icon="https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+    layout="wide"
+)
+
+# 👈 이 아래 3줄을 추가해 주세요!
+st.markdown("""
+<link rel="manifest" href="https://raw.githubusercontent.com/ses15977-creator/price-analyzer/main/manifest.json">
+""", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
