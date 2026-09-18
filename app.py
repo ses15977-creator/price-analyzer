@@ -1,241 +1,48 @@
-import streamlit as st
-import pandas as pd
+import streamlit.components.v1 as components
 
 # ---------------------------------------------------------
-# 페이지 설정
+# [1번 방법] 새 브라우저 탭 팝업을 통한 1페이지 전용 인쇄 시스템
 # ---------------------------------------------------------
-st.set_page_config(
-    page_title="SellMetrics Pro | 시장 분석 및 수익성 대시보드",
-    page_icon="📈",
-    layout="wide"
-)
 
-# ---------------------------------------------------------
-# CSS 스타일링 (웹 화면 전용 + PDF 인쇄 전용 1페이지 완벽 분리)
-# ---------------------------------------------------------
-st.markdown("""
-<style>
-    /* 기본 화면 스타일 */
-    .main-title { font-size: 2.2rem; font-weight: 800; color: #1E293B; margin-bottom: 0.2rem; }
-    .sub-title { font-size: 1.0rem; color: #64748B; margin-bottom: 1.5rem; }
-
-    /* 화면 모드일 때: PDF 전용 레이아웃은 완전 숨김 */
-    @media screen {
-        .print-only-report {
-            display: none !important;
-        }
-    }
-
-    /* PDF 인쇄 모드일 때: 기존 웹 UI 100% 숨김 & 요약 보고서만 1페이지로 표시 */
-    @media print {
-        /* 웹 화면 UI 전체 숨김 */
-        [data-testid="stSidebar"], 
-        header, 
-        footer, 
-        .stButton, 
-        .screen-only,
-        .main .block-container > div:nth-child(1) {
-            display: none !important;
-        }
-
-        @page {
-            size: A4 portrait;
-            margin: 10mm;
-        }
-
-        body {
-            background-color: white !important;
-        }
-
-        .main .block-container {
-            padding: 0 !important;
-            margin: 0 !important;
-            max-width: 100% !important;
-        }
-
-        /* 1페이지 보고서 인쇄 스타일 */
-        .print-only-report {
-            display: block !important;
-            width: 100%;
-            color: #1E293B;
-            font-family: 'Malgun Gothic', sans-serif;
-            box-sizing: border-box;
-        }
-        .report-header {
-            text-align: center;
-            border-bottom: 2px solid #0F172A;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-        .report-title { font-size: 18pt; font-weight: bold; color: #0F172A; }
-        .report-sub { font-size: 10pt; color: #475569; margin-top: 5px; }
-        
-        .section-title { 
-            font-size: 11pt; 
-            font-weight: bold; 
-            margin-top: 15px; 
-            margin-bottom: 6px; 
-            border-left: 4px solid #0F172A; 
-            padding-left: 8px; 
-            color: #0F172A;
-        }
-        
-        .custom-table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-bottom: 12px; 
-            font-size: 9pt; 
-        }
-        .custom-table th, .custom-table td { 
-            border: 1px solid #CBD5E1; 
-            padding: 6px 8px; 
-            text-align: center; 
-        }
-        .custom-table th { 
-            background-color: #F1F5F9; 
-            font-weight: bold; 
-            color: #1E293B;
-        }
-
-        .opinion-box {
-            background-color: #F8FAFC; 
-            border: 1px solid #CBD5E1; 
-            padding: 10px 12px; 
-            border-radius: 4px; 
-            font-size: 9.5pt;
-            line-height: 1.5;
-        }
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# 사이드바 입력
-# ---------------------------------------------------------
-st.sidebar.header("🎯 분석 대상 상품 설정")
-product_name = st.sidebar.text_input("상품명 / 키워드", "키스틱")
-cost_price = st.sidebar.number_input("공급 원가 (원)", min_value=0, value=11300, step=500)
-shipping_fee = st.sidebar.number_input("기본 배송비 (원)", min_value=0, value=2900, step=500)
-target_price = st.sidebar.number_input("목표 판매가 (원)", min_value=0, value=19900, step=500)
-
-st.sidebar.markdown("---")
-st.sidebar.header("⚙️ 플랫폼 수수료율 설정 (%)")
-fee_naver = st.sidebar.number_input("네이버 스마트스토어", value=5.8)
-fee_always = st.sidebar.number_input("올웨이즈", value=5.5)
-fee_kakao = st.sidebar.number_input("카카오톡 쇼핑하기", value=10.0)
-fee_coupang = st.sidebar.number_input("쿠팡 (위탁/수수료)", value=10.8)
-fee_11st = st.sidebar.number_input("11번가", value=13.0)
-fee_gmarket = st.sidebar.number_input("G마켓 / 옥션", value=13.0)
-
-# ---------------------------------------------------------
-# 데이터 계산 및 처리
-# ---------------------------------------------------------
-market_data = [
-    {"플랫폼": "쿠팡", "상품명": f"{product_name} 고급형", "판매가": 17500, "리뷰수": 1205},
-    {"플랫폼": "네이버", "상품명": f"{product_name} 본사직영", "판매가": 17900, "리뷰수": 142},
-    {"플랫폼": "올웨이즈", "상품명": f"[팀구매] {product_name}", "판매가": 17800, "리뷰수": 512},
-    {"플랫폼": "카카오쇼핑", "상품명": f"{product_name} 톡딜세트", "판매가": 18200, "리뷰수": 89},
-    {"플랫폼": "G마켓", "상품명": f"[무료배송] {product_name}", "판매가": 18500, "리뷰수": 38},
-    {"플랫폼": "11번가", "상품명": f"{product_name} 특가", "판매가": 19000, "리뷰수": 12},
-]
-
-df_market = pd.DataFrame(market_data)
-lowest_price = df_market["판매가"].min()
-lowest_platform = df_market.loc[df_market["판매가"].idxmin()]["플랫폼"]
-
-def calculate_margin(price, cost, shipping, fee_rate):
-    fee = price * (fee_rate / 100)
-    net_profit = price - cost - shipping - fee
-    margin_rate = (net_profit / price) * 100 if price > 0 else 0
-    return int(fee), int(net_profit), round(margin_rate, 1)
-
-platforms = [
-    {"플랫폼": "네이버 스마트스토어", "수수료율": fee_naver},
-    {"플랫폼": "올웨이즈", "수수료율": fee_always},
-    {"플랫폼": "카카오톡 쇼핑하기", "수수료율": fee_kakao},
-    {"플랫폼": "쿠팡", "수수료율": fee_coupang},
-    {"플랫폼": "11번가", "수수료율": fee_11st},
-    {"플랫폼": "G마켓 / 옥션", "수수료율": fee_gmarket},
-]
-
-margin_results = []
-for p in platforms:
-    fee, profit, rate = calculate_margin(target_price, cost_price, shipping_fee, p["수수료율"])
-    margin_results.append({
-        "채널명": p["플랫폼"],
-        "수수료율": f"{p['수수료율']}%",
-        "공제 수수료": f"{fee:,}원",
-        "예상 순이익": f"{profit:,}원",
-        "마진율": f"{rate}%",
-        "진입 판정": "✅ 가능" if profit > 0 else "❌ 불가"
-    })
-
-df_margin = pd.DataFrame(margin_results)
-price_diff = target_price - lowest_price
-diff_text = f"+{price_diff:,}원" if price_diff > 0 else f"{price_diff:,}원"
-
-# 진입 소견 문구
-if target_price <= lowest_price:
-    summary_opinion = f"목표 판매가({target_price:,}원)가 현재 시장 최저가({lowest_price:,}원) 이하로 설정되어 가격 경쟁력이 매우 우수합니다."
-else:
-    summary_opinion = f"목표 판매가가 시장 최저가 대비 <b>{price_diff:,}원</b> 높습니다. 사은품 증정이나 세트 상품 구성을 통한 추가 가치 제고 전략이 필요합니다."
-
-if cost_price >= lowest_price:
-    summary_opinion += "<br><span style='color:#DC2626;'>🚨 <b>경고:</b> 공급 원가가 시장 최저가 이상이므로 원가 인하 협상이 시급합니다.</span>"
-
-# ---------------------------------------------------------
-# [웹 화면 전용] 대시보드
-# ---------------------------------------------------------
-st.markdown('<div class="screen-only">', unsafe_allow_html=True)
-st.markdown('<div class="main-title">📈 SellMetrics Pro</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">e-Commerce Market Analyzer & Profitability Dashboard</div>', unsafe_allow_html=True)
-
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("공급 원가", f"{cost_price:,}원")
-col2.metric("목표 판매가", f"{target_price:,}원")
-col3.metric("시장 최저가", f"{lowest_price:,}원 ({lowest_platform})")
-col4.metric("최저가 대비 격차", diff_text)
-
-st.subheader("📊 채널별 수익성 및 정산 분석")
-st.dataframe(df_margin, use_container_width=True)
-
-st.subheader("🔍 주요 채널 최저가 및 경쟁 현황")
-st.dataframe(df_market, use_container_width=True)
-
-st.subheader("💡 시장 진입 종합 소견")
-st.info(summary_opinion.replace("<b>","").replace("</b>","").replace("<br>"," ").replace("<span style='color:#DC2626;'>","").replace("</span>",""))
-
-st.markdown("---")
-col_btn, col_info = st.columns([1, 3])
-with col_btn:
-    if st.button("📄 1페이지 요약 보고서 저장 (PDF)", use_container_width=True):
-        st.components.v1.html("<script>window.parent.print();</script>", height=0)
-with col_info:
-    st.caption("💡 버튼 클릭 후 인쇄 창에서 **[대상 -> PDF로 저장]**을 선택하면 1장짜리 깔끔한 보고서만 출력됩니다.")
-st.markdown('</div>', unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# [PDF 인쇄 전용] 1페이지 요약 보고서 레이아웃 (HTML 표 생성)
-# ---------------------------------------------------------
-margin_rows = "".join([
+# 1. 인쇄용 표 HTML 생성
+margin_rows_html = "".join([
     f"<tr><td>{r['채널명']}</td><td>{r['수수료율']}</td><td>{r['공제 수수료']}</td><td>{r['예상 순이익']}</td><td>{r['마진율']}</td><td>{r['진입 판정']}</td></tr>"
     for r in margin_results
 ])
 
-market_rows = "".join([
+market_rows_html = "".join([
     f"<tr><td>{r['플랫폼']}</td><td style='text-align:left;'>{r['상품명']}</td><td>{r['판매가']:,}원</td><td>{r['리뷰수']:,}</td></tr>"
     for r in market_data
 ])
 
-report_html = f"""
-<div class="print-only-report">
+# 2. 새 탭에 보여줄 순수 Pure HTML 문서 작성 (외부 UI 완전히 배제)
+printable_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>SELLMETRICS PRO - {product_name} 요약 보고서</title>
+    <style>
+        @page {{ size: A4 portrait; margin: 10mm; }}
+        body {{ font-family: 'Malgun Gothic', sans-serif; color: #1E293B; margin: 0; padding: 10px; font-size: 9.5pt; }}
+        .report-header {{ text-align: center; border-bottom: 2px solid #0F172A; padding-bottom: 8px; margin-bottom: 12px; }}
+        .report-title {{ font-size: 16pt; font-weight: bold; color: #0F172A; }}
+        .report-sub {{ font-size: 9.5pt; color: #475569; margin-top: 4px; }}
+        .section-title {{ font-size: 10.5pt; font-weight: bold; margin-top: 12px; margin-bottom: 6px; border-left: 4px solid #0F172A; padding-left: 6px; color: #0F172A; }}
+        table {{ width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8.5pt; }}
+        th, td {{ border: 1px solid #CBD5E1; padding: 5px 6px; text-align: center; }}
+        th {{ background-color: #F1F5F9; font-weight: bold; color: #1E293B; }}
+        .opinion-box {{ background-color: #F8FAFC; border: 1px solid #CBD5E1; padding: 8px 10px; border-radius: 4px; font-size: 9pt; line-height: 1.4; }}
+    </style>
+</head>
+<body>
     <div class="report-header">
         <div class="report-title">SELLMETRICS PRO : 상품 분석 요약 보고서</div>
         <div class="report-sub">분석 대상 상품: <b>{product_name}</b></div>
     </div>
     
     <div class="section-title">1. 핵심 가격 지표 요약</div>
-    <table class="custom-table">
+    <table>
         <thead>
             <tr>
                 <th>공급 원가</th>
@@ -257,7 +64,7 @@ report_html = f"""
     </table>
     
     <div class="section-title">2. 채널별 마진 및 수익 분석</div>
-    <table class="custom-table">
+    <table>
         <thead>
             <tr>
                 <th>채널명</th>
@@ -269,12 +76,12 @@ report_html = f"""
             </tr>
         </thead>
         <tbody>
-            {margin_rows}
+            {margin_rows_html}
         </tbody>
     </table>
     
     <div class="section-title">3. 주요 플랫폼 경쟁 현황</div>
-    <table class="custom-table">
+    <table>
         <thead>
             <tr>
                 <th>플랫폼</th>
@@ -284,7 +91,7 @@ report_html = f"""
             </tr>
         </thead>
         <tbody>
-            {market_rows}
+            {market_rows_html}
         </tbody>
     </table>
     
@@ -292,7 +99,51 @@ report_html = f"""
     <div class="opinion-box">
         <b>[종합 의견]</b> {summary_opinion}
     </div>
-</div>
+</body>
+</html>
 """
 
-st.markdown(report_html, unsafe_allow_html=True)
+# 3. 새 탭을 열어 HTML을 주입하고 인쇄를 호출하는 자바스크립트 버튼
+btn_component = f"""
+<div style="font-family: sans-serif;">
+    <button onclick="openPrintTab()" style="
+        width: 100%;
+        padding: 12px;
+        background-color: #0F172A;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+        font-size: 14px;
+        cursor: pointer;">
+        📄 1페이지 요약 보고서 새 탭에서 인쇄/저장 (PDF)
+    </button>
+</div>
+
+<script>
+function openPrintTab() {{
+    var reportContent = `{printable_html}`;
+    // 부모 창(top) 기준으로 완전히 새로운 브라우저 탭 생성
+    var win = window.top.open('', '_blank');
+    if (win) {{
+        win.document.open();
+        win.document.write(reportContent);
+        win.document.close();
+        win.focus();
+        // 문서 로딩 후 인쇄 창 실행
+        setTimeout(function() {{
+            win.print();
+        }}, 400);
+    }} else {{
+        alert('팝업이 차단되었습니다. 브라우저 주소창 우측에서 팝업 허용을 해주세요.');
+    }}
+}}
+</script>
+"""
+
+col_btn, col_info = st.columns([1.2, 2.8])
+with col_btn:
+    components.html(btn_component, height=65)
+
+with col_info:
+    st.caption("💡 버튼 클릭 시 **새 탭**에서 깔끔한 요약 보고서만 작성되어 인쇄 창이 바로 나타납니다.")
