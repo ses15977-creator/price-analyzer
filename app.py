@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # ---------------------------------------------------------
-# 페이지 설정 및 테마 디자인 (CSS)
+# 페이지 설정
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="SellMetrics Pro | 시장 분석 및 수익성 대시보드",
@@ -10,46 +10,56 @@ st.set_page_config(
     layout="wide"
 )
 
-# 고급 UI 스타일링 및 1페이지 전용 보고서 인쇄 CSS
+# ---------------------------------------------------------
+# CSS 스타일링 (웹 화면 전용 + PDF 인쇄 전용 1페이지 완벽 분리)
+# ---------------------------------------------------------
 st.markdown("""
 <style>
+    /* 기본 화면 스타일 */
     .main-title { font-size: 2.2rem; font-weight: 800; color: #1E293B; margin-bottom: 0.2rem; }
     .sub-title { font-size: 1.0rem; color: #64748B; margin-bottom: 1.5rem; }
-    
-    .kpi-container { display: flex; gap: 10px; margin-bottom: 20px; }
-    .kpi-card {
-        flex: 1;
-        background-color: #F8FAFC;
-        border: 1px solid #E2E8F0;
-        border-radius: 8px;
-        padding: 12px;
-        text-align: center;
-    }
-    .kpi-title { font-size: 0.85rem; color: #64748B; font-weight: 600; }
-    .kpi-value { font-size: 1.4rem; color: #0F172A; font-weight: 700; margin-top: 2px; }
 
-    /* 인쇄 시 화면의 일반 대시보드는 숨기고 'Print Report' 전용 요약 영역만 1페이지로 출력 */
+    /* 화면 모드일 때: PDF 전용 레이아웃은 완전 숨김 */
     @media screen {
-        .print-only-report { display: none !important; }
-    }
-    
-    @media print {
-        /* 웹 UI 요소 완전히 제거 */
-        [data-testid="stSidebar"], .no-print, header, footer, .stButton, .screen-only {
+        .print-only-report {
             display: none !important;
         }
+    }
+
+    /* PDF 인쇄 모드일 때: 기존 웹 UI 100% 숨김 & 요약 보고서만 1페이지로 표시 */
+    @media print {
+        /* 웹 화면 UI 전체 숨김 */
+        [data-testid="stSidebar"], 
+        header, 
+        footer, 
+        .stButton, 
+        .screen-only,
+        .main .block-container > div:nth-child(1) {
+            display: none !important;
+        }
+
+        @page {
+            size: A4 portrait;
+            margin: 10mm;
+        }
+
+        body {
+            background-color: white !important;
+        }
+
         .main .block-container {
             padding: 0 !important;
             margin: 0 !important;
             max-width: 100% !important;
         }
-        
-        /* 1페이지 보고서 출력 설정 */
+
+        /* 1페이지 보고서 인쇄 스타일 */
         .print-only-report {
             display: block !important;
-            padding: 20px;
-            font-family: Arial, sans-serif;
+            width: 100%;
             color: #1E293B;
+            font-family: 'Malgun Gothic', sans-serif;
+            box-sizing: border-box;
         }
         .report-header {
             text-align: center;
@@ -57,19 +67,50 @@ st.markdown("""
             padding-bottom: 10px;
             margin-bottom: 15px;
         }
-        .report-title { font-size: 20pt; font-weight: bold; }
-        .report-sub { font-size: 10pt; color: #475569; }
-        .section-title { font-size: 12pt; font-weight: bold; margin-top: 15px; margin-bottom: 5px; border-left: 4px solid #0F172A; padding-left: 8px; }
+        .report-title { font-size: 18pt; font-weight: bold; color: #0F172A; }
+        .report-sub { font-size: 10pt; color: #475569; margin-top: 5px; }
         
-        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
-        th, td { border: 1px solid #CBD5E1; padding: 6px 8px; text-align: left; }
-        th { background-color: #F1F5F9; font-weight: bold; }
+        .section-title { 
+            font-size: 11pt; 
+            font-weight: bold; 
+            margin-top: 15px; 
+            margin-bottom: 6px; 
+            border-left: 4px solid #0F172A; 
+            padding-left: 8px; 
+            color: #0F172A;
+        }
+        
+        .custom-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-bottom: 12px; 
+            font-size: 9pt; 
+        }
+        .custom-table th, .custom-table td { 
+            border: 1px solid #CBD5E1; 
+            padding: 6px 8px; 
+            text-align: center; 
+        }
+        .custom-table th { 
+            background-color: #F1F5F9; 
+            font-weight: bold; 
+            color: #1E293B;
+        }
+
+        .opinion-box {
+            background-color: #F8FAFC; 
+            border: 1px solid #CBD5E1; 
+            padding: 10px 12px; 
+            border-radius: 4px; 
+            font-size: 9.5pt;
+            line-height: 1.5;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 사이드바 입력 설정
+# 사이드바 입력
 # ---------------------------------------------------------
 st.sidebar.header("🎯 분석 대상 상품 설정")
 product_name = st.sidebar.text_input("상품명 / 키워드", "키스틱")
@@ -131,18 +172,19 @@ for p in platforms:
 
 df_margin = pd.DataFrame(margin_results)
 price_diff = target_price - lowest_price
+diff_text = f"+{price_diff:,}원" if price_diff > 0 else f"{price_diff:,}원"
 
-# 진입 소견 텍스트 생성
+# 진입 소견 문구
 if target_price <= lowest_price:
-    summary_opinion = f"목표 판매가({target_price:,}원)가 시장 최저가({lowest_price:,}원) 이하로 포지셔닝되어 가격 경쟁력이 우수합니다."
+    summary_opinion = f"목표 판매가({target_price:,}원)가 현재 시장 최저가({lowest_price:,}원) 이하로 설정되어 가격 경쟁력이 매우 우수합니다."
 else:
-    summary_opinion = f"목표 판매가가 시장 최저가 대비 {price_diff:,}원 높습니다. 증정품 구성 또는 세트 상품 구성을 통한 가치 제고가 필요합니다."
+    summary_opinion = f"목표 판매가가 시장 최저가 대비 <b>{price_diff:,}원</b> 높습니다. 사은품 증정이나 세트 상품 구성을 통한 추가 가치 제고 전략이 필요합니다."
 
 if cost_price >= lowest_price:
-    summary_opinion += " (🚨 공급 원가가 최저가 이상이므로 원가 재협상이 필수적입니다.)"
+    summary_opinion += "<br><span style='color:#DC2626;'>🚨 <b>경고:</b> 공급 원가가 시장 최저가 이상이므로 원가 인하 협상이 시급합니다.</span>"
 
 # ---------------------------------------------------------
-# [웹 화면 전용] 대시보드 출력
+# [웹 화면 전용] 대시보드
 # ---------------------------------------------------------
 st.markdown('<div class="screen-only">', unsafe_allow_html=True)
 st.markdown('<div class="main-title">📈 SellMetrics Pro</div>', unsafe_allow_html=True)
@@ -152,7 +194,6 @@ col1, col2, col3, col4 = st.columns(4)
 col1.metric("공급 원가", f"{cost_price:,}원")
 col2.metric("목표 판매가", f"{target_price:,}원")
 col3.metric("시장 최저가", f"{lowest_price:,}원 ({lowest_platform})")
-diff_text = f"+{price_diff:,}원" if price_diff > 0 else f"{price_diff:,}원"
 col4.metric("최저가 대비 격차", diff_text)
 
 st.subheader("📊 채널별 수익성 및 정산 분석")
@@ -162,7 +203,7 @@ st.subheader("🔍 주요 채널 최저가 및 경쟁 현황")
 st.dataframe(df_market, use_container_width=True)
 
 st.subheader("💡 시장 진입 종합 소견")
-st.info(summary_opinion)
+st.info(summary_opinion.replace("<b>","").replace("</b>","").replace("<br>"," ").replace("<span style='color:#DC2626;'>","").replace("</span>",""))
 
 st.markdown("---")
 col_btn, col_info = st.columns([1, 3])
@@ -170,13 +211,23 @@ with col_btn:
     if st.button("📄 1페이지 요약 보고서 저장 (PDF)", use_container_width=True):
         st.components.v1.html("<script>window.parent.print();</script>", height=0)
 with col_info:
-    st.caption("💡 버튼 클릭 후 인쇄 창에서 **[대상 -> PDF로 저장]**을 선택하면 요약된 1장짜리 보고서로 출력됩니다.")
+    st.caption("💡 버튼 클릭 후 인쇄 창에서 **[대상 -> PDF로 저장]**을 선택하면 1장짜리 깔끔한 보고서만 출력됩니다.")
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# [PDF 인쇄 전용] 1페이지 요약 보고서 레이아웃 (Print-Only)
+# [PDF 인쇄 전용] 1페이지 요약 보고서 레이아웃 (HTML 표 생성)
 # ---------------------------------------------------------
-st.markdown(f"""
+margin_rows = "".join([
+    f"<tr><td>{r['채널명']}</td><td>{r['수수료율']}</td><td>{r['공제 수수료']}</td><td>{r['예상 순이익']}</td><td>{r['마진율']}</td><td>{r['진입 판정']}</td></tr>"
+    for r in margin_results
+])
+
+market_rows = "".join([
+    f"<tr><td>{r['플랫폼']}</td><td style='text-align:left;'>{r['상품명']}</td><td>{r['판매가']:,}원</td><td>{r['리뷰수']:,}</td></tr>"
+    for r in market_data
+])
+
+report_html = f"""
 <div class="print-only-report">
     <div class="report-header">
         <div class="report-title">SELLMETRICS PRO : 상품 분석 요약 보고서</div>
@@ -184,32 +235,64 @@ st.markdown(f"""
     </div>
     
     <div class="section-title">1. 핵심 가격 지표 요약</div>
-    <table>
-        <tr>
-            <th>공급 원가</th>
-            <th>기본 배송비</th>
-            <th>목표 판매가</th>
-            <th>시장 최저가</th>
-            <th>최저가 대비 격차</th>
-        </tr>
-        <tr>
-            <td>{cost_price:,}원</td>
-            <td>{shipping_fee:,}원</td>
-            <td>{target_price:,}원</td>
-            <td>{lowest_price:,}원 ({lowest_platform})</td>
-            <td>{diff_text}</td>
-        </tr>
+    <table class="custom-table">
+        <thead>
+            <tr>
+                <th>공급 원가</th>
+                <th>기본 배송비</th>
+                <th>목표 판매가</th>
+                <th>시장 최저가</th>
+                <th>최저가 대비 격차</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><b>{cost_price:,}원</b></td>
+                <td>{shipping_fee:,}원</td>
+                <td><b>{target_price:,}원</b></td>
+                <td>{lowest_price:,}원 ({lowest_platform})</td>
+                <td><b>{diff_text}</b></td>
+            </tr>
+        </tbody>
     </table>
     
     <div class="section-title">2. 채널별 마진 및 수익 분석</div>
-    {df_margin.to_html(index=False)}
+    <table class="custom-table">
+        <thead>
+            <tr>
+                <th>채널명</th>
+                <th>수수료율</th>
+                <th>공제 수수료</th>
+                <th>예상 순이익</th>
+                <th>마진율</th>
+                <th>진입 판정</th>
+            </tr>
+        </thead>
+        <tbody>
+            {margin_rows}
+        </tbody>
+    </table>
     
     <div class="section-title">3. 주요 플랫폼 경쟁 현황</div>
-    {df_market.to_html(index=False)}
+    <table class="custom-table">
+        <thead>
+            <tr>
+                <th>플랫폼</th>
+                <th>상품명</th>
+                <th>판매가</th>
+                <th>리뷰 수</th>
+            </tr>
+        </thead>
+        <tbody>
+            {market_rows}
+        </tbody>
+    </table>
     
     <div class="section-title">4. 최종 시장 진입 소견</div>
-    <div style="background-color: #F8FAFC; border: 1px solid #CBD5E1; padding: 10px; border-radius: 4px; font-size: 9.5pt;">
-        <b>종합 의견:</b> {summary_opinion}
+    <div class="opinion-box">
+        <b>[종합 의견]</b> {summary_opinion}
     </div>
 </div>
-""", unsafe_allow_html=True)
+"""
+
+st.markdown(report_html, unsafe_allow_html=True)
