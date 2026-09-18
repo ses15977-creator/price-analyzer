@@ -10,14 +10,20 @@ st.set_page_config(
     page_icon="https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
     layout="wide"
 )
-)",
-    layout="wide"
-)
 
 st.markdown("""
 <style>
-    .main-title { font-size: 2.2rem; font-weight: 800; color: #1E293B; margin-bottom: 0.2rem; }
-    .sub-title { font-size: 1.0rem; color: #64748B; margin-bottom: 1.5rem; }
+.main-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #1E293B;
+    margin-bottom: 0.2rem;
+}
+.sub-title {
+    font-size: 1.0rem;
+    color: #64748B;
+    margin-bottom: 1.5rem;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -76,7 +82,7 @@ for p in platforms:
     fee, profit, rate = calculate_margin(target_price, cost_price, shipping_fee, p["수수료율"])
     margin_results.append({
         "채널명": p["플랫폼"],
-        "수수료율": f"{p['수수료율']}%",
+        "수수료율": f"{p['수수율'] if '수수율' in p else p['수수료율']}%",
         "공제 수수료": f"{fee:,}원",
         "예상 순이익": f"{profit:,}원",
         "마진율": f"{rate}%",
@@ -84,6 +90,7 @@ for p in platforms:
     })
 
 df_margin = pd.DataFrame(margin_results)
+
 price_diff = target_price - lowest_price
 diff_text = f"+{price_diff:,}원" if price_diff > 0 else f"{price_diff:,}원"
 
@@ -97,7 +104,7 @@ if cost_price >= lowest_price:
     summary_opinion += "<br><span style='color:#DC2626;'>🚨 <b>경고:</b> 공급 원가가 시장 최저가 이상이므로 원가 인하 협상이 시급합니다.</span>"
 
 # ---------------------------------------------------------
-# 4. 웹 화면 메인 대시보출력
+# 4. 웹 화면 메인 대시보드 출력
 # ---------------------------------------------------------
 st.markdown('<div class="main-title">📈 SellMetrics Pro</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">e-Commerce Market Analyzer & Profitability Dashboard</div>', unsafe_allow_html=True)
@@ -178,7 +185,7 @@ printable_html = f"""
             </tr>
         </tbody>
     </table>
-    
+
     <div class="section-title">2. 채널별 마진 및 수익 분석</div>
     <table>
         <thead>
@@ -195,7 +202,7 @@ printable_html = f"""
             {margin_rows_html}
         </tbody>
     </table>
-    
+
     <div class="section-title">3. 주요 플랫폼 경쟁 현황</div>
     <table>
         <thead>
@@ -210,7 +217,7 @@ printable_html = f"""
             {market_rows_html}
         </tbody>
     </table>
-    
+
     <div class="section-title">4. 최종 시장 진입 소견</div>
     <div class="opinion-box">
         <b>[종합 의견]</b> {summary_opinion}
@@ -234,7 +241,6 @@ btn_component = f"""
         📄 1페이지 요약 보고서 새 탭에서 인쇄/저장 (PDF)
     </button>
 </div>
-
 <script>
 function openPrintTab() {{
     var reportContent = `{printable_html}`;
@@ -257,6 +263,5 @@ function openPrintTab() {{
 col_btn, col_info = st.columns([1.2, 2.8])
 with col_btn:
     components.html(btn_component, height=65)
-
 with col_info:
     st.caption("💡 버튼 클릭 시 **새 탭**에서 요약 보고서만 깨끗하게 작성되어 1페이지 인쇄 창이 실행됩니다.")
