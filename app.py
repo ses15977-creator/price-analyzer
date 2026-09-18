@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit.components.v1 as components
 
 # ---------------------------------------------------------
-# 1. 페이지 및 기본 UI 설정
+# 1. 페이지 및 기본 UI 설정 (차트 아이콘 반영)
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="SellMetrics Pro | 시장 분석 및 수익성 대시보드",
@@ -46,7 +46,7 @@ fee_11st = st.sidebar.number_input("11번가", value=13.0)
 fee_gmarket = st.sidebar.number_input("G마켓 / 옥션", value=13.0)
 
 # ---------------------------------------------------------
-# 3. 데이터 계산 및 변수 정의 (NameError 방지)
+# 3. 데이터 계산 및 변수 정의
 # ---------------------------------------------------------
 market_data = [
     {"플랫폼": "쿠팡", "상품명": f"{product_name} 고급형", "판매가": 17500, "리뷰수": 1205},
@@ -76,13 +76,12 @@ platforms = [
     {"플랫폼": "G마켓 / 옥션", "수수료율": fee_gmarket},
 ]
 
-# margin_results 생성
 margin_results = []
 for p in platforms:
     fee, profit, rate = calculate_margin(target_price, cost_price, shipping_fee, p["수수료율"])
     margin_results.append({
         "채널명": p["플랫폼"],
-        "수수료율": f"{p['수수율'] if '수수율' in p else p['수수료율']}%",
+        "수수료율": f"{p['수수료율']}%",
         "공제 수수료": f"{fee:,}원",
         "예상 순이익": f"{profit:,}원",
         "마진율": f"{rate}%",
@@ -94,7 +93,6 @@ df_margin = pd.DataFrame(margin_results)
 price_diff = target_price - lowest_price
 diff_text = f"+{price_diff:,}원" if price_diff > 0 else f"{price_diff:,}원"
 
-# 진입 소견 문구 생성
 if target_price <= lowest_price:
     summary_opinion = f"목표 판매가({target_price:,}원)가 현재 시장 최저가({lowest_price:,}원) 이하로 설정되어 가격 경쟁력이 매우 우수합니다."
 else:
@@ -104,7 +102,7 @@ if cost_price >= lowest_price:
     summary_opinion += "<br><span style='color:#DC2626;'>🚨 <b>경고:</b> 공급 원가가 시장 최저가 이상이므로 원가 인하 협상이 시급합니다.</span>"
 
 # ---------------------------------------------------------
-# 4. 웹 화면 메인 대시보드 출력
+# 4. 메인 화면 대시보드 출력
 # ---------------------------------------------------------
 st.markdown('<div class="main-title">📈 SellMetrics Pro</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">e-Commerce Market Analyzer & Profitability Dashboard</div>', unsafe_allow_html=True)
@@ -127,7 +125,7 @@ st.info(summary_opinion.replace("<b>","").replace("</b>","").replace("<br>"," ")
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 5. 새 브라우저 탭 1페이지 요약 보고서 인쇄 시스템
+# 5. 요약 보고서 인쇄 기능
 # ---------------------------------------------------------
 margin_rows_html = "".join([
     f"<tr><td>{r['채널명']}</td><td>{r['수수료율']}</td><td>{r['공제 수수료']}</td><td>{r['예상 순이익']}</td><td>{r['마진율']}</td><td>{r['진입 판정']}</td></tr>"
