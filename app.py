@@ -63,7 +63,6 @@ with tab2:
     search_keyword = st.text_input("분석할 키워드를 입력하세요", "캠핑용품")
     
     if st.button("키워드 트렌드 조회", type="primary"):
-        # Secrets에 설정된 네이버 API 키 사용 시도
         client_id = st.secrets.get("NAVER_CLIENT_ID", None)
         client_secret = st.secrets.get("NAVER_CLIENT_SECRET", None)
         
@@ -98,7 +97,6 @@ with tab2:
             except Exception as e:
                 st.error(f"API 연동 중 오류 발생: {e}")
         else:
-            # API 키가 미설정된 경우 샘플 그래프 표출
             st.info(f"💡 (네이버 API 키 미설정 모드) '{search_keyword}' 예시 검색량 트렌드입니다.")
             chart_data = pd.DataFrame({
                 "날짜": ["2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"],
