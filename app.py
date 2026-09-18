@@ -7,7 +7,11 @@ import streamlit.components.v1 as components
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="SellMetrics Pro | 시장 분석 및 수익성 대시보드",
-    page_icon="📈",
+    page_icon="st.set_page_config(
+    page_title="SellMetrics Pro | 시장 분석 및 수익성 대시보드",
+    page_icon="https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+    layout="wide"
+)",
     layout="wide"
 )
 
