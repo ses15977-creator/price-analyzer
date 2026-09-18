@@ -24,6 +24,13 @@ st.markdown("""
     color: #64748B;
     margin-bottom: 1.5rem;
 }
+.card-box {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -46,7 +53,7 @@ fee_11st = st.sidebar.number_input("11번가", value=13.0)
 fee_gmarket = st.sidebar.number_input("G마켓 / 옥션", value=13.0)
 
 # ---------------------------------------------------------
-# 3. 데이터 계산 및 변수 정의
+# 3. 데이터 계산 및 기본 마진 분석
 # ---------------------------------------------------------
 market_data = [
     {"플랫폼": "쿠팡", "상품명": f"{product_name} 고급형", "판매가": 17500, "리뷰수": 1205},
@@ -60,6 +67,7 @@ market_data = [
 df_market = pd.DataFrame(market_data)
 lowest_price = df_market["판매가"].min()
 lowest_platform = df_market.loc[df_market["판매가"].idxmin()]["플랫폼"]
+max_review = df_market["리뷰수"].max()
 
 def calculate_margin(price, cost, shipping, fee_rate):
     fee = price * (fee_rate / 100)
@@ -102,7 +110,51 @@ if cost_price >= lowest_price:
     summary_opinion += "<br><span style='color:#DC2626;'>🚨 <b>경고:</b> 공급 원가가 시장 최저가 이상이므로 원가 인하 협상이 시급합니다.</span>"
 
 # ---------------------------------------------------------
-# 4. 메인 화면 대시보드 출력
+# 4. 차별화 기능 1, 2, 3 로직 계산
+# ---------------------------------------------------------
+
+# [차별화 1] 소싱 리스크 평가 스코어카드
+risk_score = 100
+risk_reasons = []
+
+cost_ratio = (cost_price / target_price * 100) if target_price > 0 else 100
+if cost_ratio > 65:
+    risk_score -= 30
+    risk_reasons.append(f"원가율 부담 높음 ({cost_ratio:.1f}% > 기준 65%)")
+elif cost_ratio > 50:
+    risk_score -= 15
+    risk_reasons.append(f"원가율 보통 ({cost_ratio:.1f}%)")
+
+if target_price > lowest_price:
+    risk_score -= 25
+    risk_reasons.append(f"시장 최저가 대비 {price_diff:,}원 비쌈")
+
+if max_review >= 1000 and target_price > lowest_price:
+    risk_score -= 20
+    risk_reasons.append("기존 상위 권 선점자(리뷰 1,000개 이상) 대비 가격 열세")
+
+if risk_score >= 80:
+    risk_grade, risk_color = "🟢 안전 (소싱 강력 추천)", "#16A34A"
+elif risk_score >= 50:
+    risk_grade, risk_color = "🟡 주의 (전략 수정 필요)", "#D97706"
+else:
+    risk_grade, risk_color = "🔴 위험 (진입 재검토 권장)", "#DC2626"
+
+# [차별화 2] 스마트 광고 한도 & ROAS 역산기 (네이버 기준 예시)
+avg_fee_rate = fee_naver
+_, avg_profit, _ = calculate_margin(target_price, cost_price, shipping_fee, avg_fee_rate)
+
+if avg_profit > 0 and target_price > 0:
+    min_bep_roas = round((target_price / avg_profit) * 100, 1)
+    max_cpc_100per = int(avg_profit)            # 전환율 1% 기준 (100회 클릭당 1건 구매)
+    max_cpc_50per = int(avg_profit * 0.02)     # 전환율 2% 기준
+else:
+    min_bep_roas = 0
+    max_cpc_100per = 0
+    max_cpc_50per = 0
+
+# ---------------------------------------------------------
+# 5. 메인 화면 대시보드 출력
 # ---------------------------------------------------------
 st.markdown('<div class="main-title">📈 SellMetrics Pro</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">e-Commerce Market Analyzer & Profitability Dashboard</div>', unsafe_allow_html=True)
@@ -113,9 +165,70 @@ col2.metric("목표 판매가", f"{target_price:,}원")
 col3.metric("시장 최저가", f"{lowest_price:,}원", delta=lowest_platform)
 col4.metric("최저가 대비 격차", diff_text)
 
+# ---------------------------------------------------------
+# 🌟 차별화 1: 소싱 리스크 평가 스코어카드 섹션
+# ---------------------------------------------------------
+st.markdown("---")
+st.subheader("🛡️ 소싱 리스크 평가 스코어카드 (SellMetrics Score)")
+col_sc1, col_sc2 = st.columns([1, 2])
+with col_sc1:
+    st.markdown(f"""
+    <div style="text-align:center; padding: 20px; background-color: #F8FAFC; border-radius: 8px; border: 2px solid {risk_color};">
+        <div style="font-size: 1.1rem; color: #475569; font-weight: bold;">진입 안전도 점수</div>
+        <div style="font-size: 2.8rem; font-weight: 900; color: {risk_color};">{risk_score}점</div>
+        <div style="font-size: 1.0rem; font-weight: bold; color: {risk_color};">{risk_grade}</div>
+    </div>
+    """, unsafe_allow_html=True)
+with col_sc2:
+    st.markdown("##### 📌 리스크 요인 진단 리포트")
+    if risk_reasons:
+        for reason in risk_reasons:
+            st.write(f"- ⚠️ {reason}")
+    else:
+        st.write("- ✅ 감지된 주요 리스크가 없습니다. 가격 및 원가 경쟁력이 우수합니다.")
+
+# ---------------------------------------------------------
+# 📊 기존 마진 및 시장 현황
+# ---------------------------------------------------------
+st.markdown("---")
 st.subheader("📊 채널별 수익성 및 정산 분석")
 st.dataframe(df_margin, use_container_width=True)
 
+# ---------------------------------------------------------
+# 🌟 차별화 2 & 3: 탭 메뉴로 추가 기능 탑재
+# ---------------------------------------------------------
+st.markdown("---")
+tab_opt, tab_ad = st.tabs(["🎯 [신기능] 마켓별 역산 판매가 추천", "📢 [신기능] 스마트 광고 한도 & ROAS 역산기"])
+
+with tab_opt:
+    st.markdown("##### 💡 목표 순이익을 얻기 위한 각 채널별 권장 판매가")
+    target_desired_profit = st.number_input("원하는 목표 순이익 입력 (원)", min_value=1000, value=3000, step=500)
+    
+    calc_rows = []
+    for p in platforms:
+        rate = p["수수료율"] / 100
+        # 순이익 = 판매가 - 원가 - 배송비 - (판매가 * 수수료율)
+        # 판매가 * (1 - 수수료율) = 순이익 + 원가 + 배송비
+        rec_price = (target_desired_profit + cost_price + shipping_fee) / (1 - rate)
+        rec_price = int(round(rec_price, -2)) # 100원 단위 반올림
+        
+        calc_rows.append({
+            "채널명": p["플랫폼"],
+            "수수료율": f"{p['수수료율']}%",
+            "희망 순이익": f"{target_desired_profit:,}원",
+            "권장 판매가": f"{rec_price:,}원",
+            "현재 목표가 차이": f"{rec_price - target_price:+,}원"
+        })
+    st.dataframe(pd.DataFrame(calc_rows), use_container_width=True)
+
+with tab_ad:
+    st.markdown("##### 🎯 적자 없는 마케팅/광고 집행 가이드 (네이버 스마트스토어 기준)")
+    col_ad1, col_ad2, col_ad3 = st.columns(3)
+    col_ad1.metric("최소 목표 ROAS (손익분기점)", f"{min_bep_roas}%", help="이 ROAS 이상이어야 광고 집행 시 적자를 보지 않습니다.")
+    col_ad2.metric("최대 클릭당 단가 (전환율 1%)", f"{max_cpc_100per:,}원", help="구매전환율 1% 가정 시 허용 가능한 1클릭당 최대 광고비입니다.")
+    col_ad3.metric("최대 클릭당 단가 (전환율 2%)", f"{max_cpc_50per:,}원", help="구매전환율 2% 가정 시 허용 가능한 1클릭당 최대 광고비입니다.")
+
+st.markdown("---")
 st.subheader("🔍 주요 채널 최저가 및 경쟁 현황")
 st.dataframe(df_market, use_container_width=True)
 
@@ -125,7 +238,7 @@ st.info(summary_opinion.replace("<b>","").replace("</b>","").replace("<br>"," ")
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 5. 요약 보고서 인쇄 기능 (버튼 크기 & 높이 보정 반영)
+# 6. 요약 보고서 인쇄 기능 (A4 1페이지 규격 유지)
 # ---------------------------------------------------------
 margin_rows_html = "".join([
     f"<tr><td>{r['채널명']}</td><td>{r['수수료율']}</td><td>{r['공제 수수료']}</td><td>{r['예상 순이익']}</td><td>{r['마진율']}</td><td>{r['진입 판정']}</td></tr>"
@@ -159,7 +272,7 @@ printable_html = f"""
 <body>
     <div class="report-header">
         <div class="report-title">SELLMETRICS PRO : 상품 분석 요약 보고서</div>
-        <div class="report-sub">분석 대상 상품: <b>{product_name}</b></div>
+        <div class="report-sub">분석 대상 상품: <b>{product_name}</b> | 진입 안전도: <b>{risk_score}점 ({risk_grade})</b></div>
     </div>
     
     <div class="section-title">1. 핵심 가격 지표 요약</div>
@@ -201,7 +314,25 @@ printable_html = f"""
         </tbody>
     </table>
 
-    <div class="section-title">3. 주요 플랫폼 경쟁 현황</div>
+    <div class="section-title">3. 마케팅 집행 한도 (손익분기점)</div>
+    <table>
+        <thead>
+            <tr>
+                <th>최소 목표 ROAS</th>
+                <th>클릭당 최대 허용 단가 (전환율 1%)</th>
+                <th>클릭당 최대 허용 단가 (전환율 2%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><b>{min_bep_roas}%</b></td>
+                <td>{max_cpc_100per:,}원</td>
+                <td>{max_cpc_50per:,}원</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">4. 주요 플랫폼 경쟁 현황</div>
     <table>
         <thead>
             <tr>
@@ -216,7 +347,7 @@ printable_html = f"""
         </tbody>
     </table>
 
-    <div class="section-title">4. 최종 시장 진입 소견</div>
+    <div class="section-title">5. 최종 시장 진입 소견</div>
     <div class="opinion-box">
         <b>[종합 의견]</b> {summary_opinion}
     </div>
