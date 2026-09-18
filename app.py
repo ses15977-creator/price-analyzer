@@ -102,7 +102,7 @@ if cost_price >= lowest_price:
     summary_opinion += "<br><span style='color:#DC2626;'>🚨 <b>경고:</b> 공급 원가가 시장 최저가 이상이므로 원가 인하 협상이 시급합니다.</span>"
 
 # ---------------------------------------------------------
-# 4. 메인 화면 대시보드 출력 (시장 최저가 표기 수정)
+# 4. 메인 화면 대시보드 출력
 # ---------------------------------------------------------
 st.markdown('<div class="main-title">📈 SellMetrics Pro</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">e-Commerce Market Analyzer & Profitability Dashboard</div>', unsafe_allow_html=True)
@@ -110,7 +110,7 @@ st.markdown('<div class="sub-title">e-Commerce Market Analyzer & Profitability D
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("공급 원가", f"{cost_price:,}원")
 col2.metric("목표 판매가", f"{target_price:,}원")
-col3.metric("시장 최저가", f"{lowest_price:,}원", delta=lowest_platform)  # 👈 '원'으로 명확하게 표시하도록 수정
+col3.metric("시장 최저가", f"{lowest_price:,}원", delta=lowest_platform)
 col4.metric("최저가 대비 격차", diff_text)
 
 st.subheader("📊 채널별 수익성 및 정산 분석")
@@ -125,7 +125,7 @@ st.info(summary_opinion.replace("<b>","").replace("</b>","").replace("<br>"," ")
 st.markdown("---")
 
 # ---------------------------------------------------------
-# 5. 요약 보고서 인쇄 기능
+# 5. 요약 보고서 인쇄 기능 (버튼 크기 & 높이 보정 반영)
 # ---------------------------------------------------------
 margin_rows_html = "".join([
     f"<tr><td>{r['채널명']}</td><td>{r['수수료율']}</td><td>{r['공제 수수료']}</td><td>{r['예상 순이익']}</td><td>{r['마진율']}</td><td>{r['진입 판정']}</td></tr>"
@@ -225,18 +225,19 @@ printable_html = f"""
 """
 
 btn_component = f"""
-<div style="font-family: sans-serif;">
+<div style="font-family: sans-serif; padding-top: 5px;">
     <button onclick="openPrintTab()" style="
         width: 100%;
-        padding: 12px;
+        padding: 10px 12px;
         background-color: #0F172A;
         color: white;
         border: none;
         border-radius: 6px;
         font-weight: bold;
-        font-size: 14px;
+        font-size: 13px;
+        line-height: 1.4;
         cursor: pointer;">
-        📄 1페이지 요약 보고서 새 탭에서 인쇄/저장 (PDF)
+        📄 1페이지 요약 보고서<br>새 탭에서 인쇄/저장 (PDF)
     </button>
 </div>
 <script>
@@ -258,8 +259,8 @@ function openPrintTab() {{
 </script>
 """
 
-col_btn, col_info = st.columns([1.2, 2.8])
+col_btn, col_info = st.columns([1.3, 2.7])
 with col_btn:
-    components.html(btn_component, height=65)
+    components.html(btn_component, height=100)
 with col_info:
     st.caption("💡 버튼 클릭 시 **새 탭**에서 요약 보고서만 깨끗하게 작성되어 1페이지 인쇄 창이 실행됩니다.")
