@@ -3,23 +3,13 @@ import pandas as pd
 import streamlit.components.v1 as components
 
 # ---------------------------------------------------------
-# 1. 페이지 및 기본 UI 설정 (차트 아이콘 반영)
+# 1. 페이지 및 기본 UI 설정
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="SellMetrics Pro | 시장 분석 및 수익성 대시보드",
     page_icon="https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
     layout="wide"
 )
-st.set_page_config(
-    page_title="SellMetrics Pro | 시장 분석 및 수익성 대시보드",
-    page_icon="https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-    layout="wide"
-)
-
-# 👈 이 아래 3줄을 추가해 주세요!
-st.markdown("""
-<link rel="manifest" href="https://raw.githubusercontent.com/ses15977-creator/price-analyzer/main/manifest.json">
-""", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
@@ -112,7 +102,7 @@ if cost_price >= lowest_price:
     summary_opinion += "<br><span style='color:#DC2626;'>🚨 <b>경고:</b> 공급 원가가 시장 최저가 이상이므로 원가 인하 협상이 시급합니다.</span>"
 
 # ---------------------------------------------------------
-# 4. 메인 화면 대시보드 출력
+# 4. 메인 화면 대시보드 출력 (시장 최저가 표기 수정)
 # ---------------------------------------------------------
 st.markdown('<div class="main-title">📈 SellMetrics Pro</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">e-Commerce Market Analyzer & Profitability Dashboard</div>', unsafe_allow_html=True)
@@ -120,7 +110,7 @@ st.markdown('<div class="sub-title">e-Commerce Market Analyzer & Profitability D
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("공급 원가", f"{cost_price:,}원")
 col2.metric("목표 판매가", f"{target_price:,}원")
-col3.metric("시장 최저가", f"{lowest_price:,}원 ({lowest_platform})")
+col3.metric("시장 최저가", f"{lowest_price:,}원", delta=lowest_platform)  # 👈 '원'으로 명확하게 표시하도록 수정
 col4.metric("최저가 대비 격차", diff_text)
 
 st.subheader("📊 채널별 수익성 및 정산 분석")
