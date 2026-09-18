@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client, Client
-import json
+import urllib.parse
 
 # 페이지 기본 설정
 st.set_page_config(
@@ -55,7 +55,7 @@ if st.session_state.user is None:
                 else:
                     st.warning("이메일과 비밀번호를 모두 입력해 주세요.")
 
-    # 2. 회원가입 탭 (st.form 도입으로 누락 현상 완벽 해결)
+    # 2. 회원가입 탭 (한글 ASCII 인코딩 에러 완전 보완)
     with tab2:
         st.subheader("신규 셀러 회원가입")
         with st.form("signup_form"):
@@ -71,8 +71,8 @@ if st.session_state.user is None:
                 
                 if email_val and pw_val and name_val:
                     try:
-                        # 한글 인코딩 안전 변환
-                        safe_name = json.loads(json.dumps(name_val, ensure_ascii=False))
+                        # 한글 인코딩 오류 방지 (URL 인코딩 변환)
+                        safe_name = urllib.parse.quote(name_val)
                         
                         res = supabase.auth.sign_up({
                             "email": email_val,
@@ -94,7 +94,13 @@ if st.session_state.user is None:
 # -------------------------------------------------------------------
 else:
     user_data = st.session_state.user.user_metadata or {}
-    display_name = user_data.get("name", st.session_state.user.email)
+    encoded_name = user_data.get("name", "")
+    
+    # URL 인코딩된 이름을 다시 원래 한글로 디코딩
+    try:
+        display_name = urllib.parse.unquote(encoded_name) if encoded_name else st.session_state.user.email
+    except:
+        display_name = st.session_state.user.email
     
     st.sidebar.title(f"👤 {display_name} 님")
     st.sidebar.caption(f"계정: {st.session_state.user.email}")
