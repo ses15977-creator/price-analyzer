@@ -1,8 +1,5 @@
 import streamlit as st
-import pandas as pd
 from supabase import create_client, Client
-import json
-import urllib.request
 
 # 페이지 기본 설정
 st.set_page_config(
@@ -11,28 +8,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# Supabase 연동 설정
+# Supabase 연동 설정 (공백 및 특수 인코딩 제거)
 @st.cache_resource
 def init_supabase() -> Client:
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
+    url = str(st.secrets["SUPABASE_URL"]).strip()
+    key = str(st.secrets["SUPABASE_KEY"]).strip()
     return create_client(url, key)
 
 supabase = init_supabase()
-
-# Direct REST API를 통한 회원가입 함수 (인코딩 에러 완전 우회)
-def direct_signup(email, password):
-    url = f"{st.secrets['SUPABASE_URL']}/auth/v1/signup"
-    headers = {
-        "apikey": st.secrets["SUPABASE_KEY"],
-        "Content-Type": "application/json"
-    }
-    data = json.dumps({"email": email, "password": password}).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
-    
-    with urllib.request.urlopen(req) as response:
-        res_body = response.read().decode("utf-8")
-        return json.loads(res_body)
 
 # 세션 상태 초기화
 if "user" not in st.session_state:
@@ -56,11 +39,13 @@ if st.session_state.user is None:
             submit_login = st.form_submit_button("로그인 완료", type="primary", use_container_width=True)
             
             if submit_login:
-                if login_email.strip() and login_pw.strip():
+                email_clean = login_email.strip()
+                pw_clean = login_pw.strip()
+                if email_clean and pw_clean:
                     try:
                         res = supabase.auth.sign_in_with_password({
-                            "email": login_email.strip(),
-                            "password": login_pw.strip()
+                            "email": email_clean,
+                            "password": pw_clean
                         })
                         st.session_state.user = res.user
                         st.success("로그인 성공!")
@@ -70,7 +55,7 @@ if st.session_state.user is None:
                 else:
                     st.warning("이메일과 비밀번호를 모두 입력해 주세요.")
 
-    # 2. 회원가입 탭 (Direct REST API 사용으로 ASCII 오류 완전 해결)
+    # 2. 회원가입 탭
     with tab2:
         st.subheader("신규 셀러 회원가입")
         with st.form("signup_form"):
@@ -84,11 +69,11 @@ if st.session_state.user is None:
                 
                 if email_val and pw_val:
                     try:
-                        direct_signup(email_val, pw_val)
-                        st.success("회원가입이 완료되었습니다! 🔑 로그인 탭으로 이동해서 로그인해 주세요.")
-                    except urllib.error.HTTPError as e:
-                        err_msg = e.read().decode("utf-8")
-                        st.error(f"회원가입 실패: {err_msg}")
+                        res = supabase.auth.sign_up({
+                            "email": email_val,
+                            "password": pw_val
+                        })
+                        st.success("회원가입 요청이 완료되었습니다! 🔑 로그인 탭으로 이동해 로그인해 보세요.")
                     except Exception as e:
                         st.error(f"회원가입 실패: {e}")
                 else:
